@@ -23,3 +23,5 @@
 #define SYS_date   22
 #define SYS_virt2real 23
 #define SYS_num_pages 24
+#define SYS_corretor 25
+#define SYS_forkcow 26

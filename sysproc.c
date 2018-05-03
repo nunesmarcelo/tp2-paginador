@@ -108,24 +108,40 @@ sys_virt2real(void){
   char *va;
   argstr(0, &va);
   
-/*  pde_t *pde;
+  pde_t *pde;
   pte_t *pgtab;
 
   pde = &(myproc()->pgdir[PDX(va)]);
-  if(*pde & PTE_P){
-    pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
-    return (int)(&pgtab[PTX(va)]);
-  }
+  // if(*pde & PTE_P){
+  //   pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+  //   return (int)(&pgtab[PTX(va)]);
+  // }
   
 
   return 0;
-*/
+
   //static pte_t* walkpgdir(pde_t *pgdir, const void *va, int alloc)
-  return (walkpgdir(myproc()->pgdir[PDX(va)],va,0));
+  // return (walkpgdir(myproc()->pgdir[PDX(va)],va,0));
 
 }
 
 int
 sys_num_pages(void){
   return (int)(myproc()->sz / (float)4096);
+}
+
+int
+sys_corretor(void){
+  char *ptr;
+  argptr(0, &ptr, sizeof(struct rtcdate*));
+
+  return 0;
+}
+
+int
+sys_forkcow(void){
+  char *ptr;
+  argptr(0, &ptr, sizeof(struct rtcdate*));
+  
+  return 0;
 }
