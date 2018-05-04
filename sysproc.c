@@ -6,6 +6,12 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "spinlock.h"
+
+struct {
+  struct spinlock lock;
+  struct proc proc[NPROC];
+} ptable;
 
 int
 sys_fork(void)
@@ -107,15 +113,22 @@ int
 sys_virt2real(void){
   char *va;
   argstr(0, &va);
+  // cprintf("%x\n",va);
   
   pde_t *pde;
+  // cprintf("%x\n",pde);
+  // cprintf("%x\n",*pde);
+
   pte_t *pgtab;
 
   pde = &(myproc()->pgdir[PDX(va)]);
-  // if(*pde & PTE_P){
-  //   pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
-  //   return (int)(&pgtab[PTX(va)]);
-  // }
+  // cprintf("%x\n",pde);
+  
+  if(*pde & PTE_P){
+    pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+    // cprintf("%x\n",pgtab);
+    return (int)(&pgtab[PTX(va)]);
+  }
   
 
   return 0;
@@ -127,21 +140,55 @@ sys_virt2real(void){
 
 int
 sys_num_pages(void){
-  return (int)(myproc()->sz / (float)4096);
+  return (uint)(myproc()->sz / (uint)4096);
 }
 
 int
 sys_corretor(void){
-  char *ptr;
-  argptr(0, &ptr, sizeof(struct rtcdate*));
-
   return 0;
 }
 
+
 int
 sys_forkcow(void){
-  char *ptr;
-  argptr(0, &ptr, sizeof(struct rtcdate*));
-  
+  int i, pid;
+  struct proc *np;
+  struct proc *curproc = myproc();
+
+  // // Allocate process.
+  // if((np = allocproc()) == 0){
+  //   return -1;
+  // }
+
+  // Copy process state from proc.
+  if((np->pgdir = (pte_t*)copyuvmcow(curproc->pgdir, curproc->sz)) == 0){
+    kfree(np->kstack);
+    np->kstack = 0;
+    np->state = UNUSED;
+    return -1;
+  }
+  np->sz = curproc->sz;
+  np->parent = curproc;
+  *np->tf = *curproc->tf;
+
+  // Clear %eax so that fork returns 0 in the child.
+  np->tf->eax = 0;
+
+  for(i = 0; i < NOFILE; i++)
+    if(curproc->ofile[i])
+      np->ofile[i] = filedup(curproc->ofile[i]);
+  np->cwd = idup(curproc->cwd);
+
+  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+
+  pid = np->pid;
+
+  acquire(&ptable.lock);
+
+  np->state = RUNNABLE;
+
+  release(&ptable.lock);
+
+  return pid;
   return 0;
 }

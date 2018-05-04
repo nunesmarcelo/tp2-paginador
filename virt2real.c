@@ -16,7 +16,7 @@ main(int argc, char *argv[])
 
 	char *physical = "";
 
-	printf(stdout,"%s\n",(char*)(virt2real(physical)));
+	printf(stdout,"%x\n",(char*)(virt2real(physical)));
 
   // Imprima a data aqui
 
