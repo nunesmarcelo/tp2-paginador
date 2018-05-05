@@ -1,3 +1,4 @@
+// #include "user.h"
 #include "param.h"
 #include "types.h"
 #include "defs.h"
@@ -342,8 +343,7 @@ bad:
   return 0;
 }
 
-// Given a parent process's page table, create a copy
-// of it for a child.
+// Given a parent process's page table, set its to READ_ONLY and COPY_ON_WRITE
 pde_t*
 copyuvmcow(pde_t *pgdir, uint sz)
 {
@@ -352,21 +352,46 @@ copyuvmcow(pde_t *pgdir, uint sz)
   uint pa, i, flags;
   char *mem;
 
-  if((d = setupkvm()) == 0)
-    return 0;
+  // if((d = setupkvm()) == 0)
+  //   return 0;
+  *d = *pgdir;
+
+cprintf("d1= %x\n",*d);
+  *d &= ~PTE_W;
+  *d |= PTE_COW;
+cprintf("d2= %x\n",*d);
   for(i = 0; i < sz; i += PGSIZE){
-    if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
-      panic("copyuvm: pte should exist");
+  // cprintf("cheguei\n");
+    // if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
+    //   panic("copyuvm: pte should exist");
+    d = &(myproc()->pgdir[PDX(pgdir)]);
+    // exit();
+    if(*d & PTE_P)
+      pte = (pte_t*)P2V(PTE_ADDR(*d));
+    else
+      pte = 0;
+
+    cprintf("pte= %x\n",pte);
     if(!(*pte & PTE_P))
       panic("copyuvm: page not present");
-    pa = PTE_ADDR(*pte);
+
+    // pa = PTE_ADDR(*pte);
+
+    *pte &= ~PTE_W;
+
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto bad;
-    memmove(mem, (char*)P2V(pa), PGSIZE);
-    if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0)
+    
+
+    // if((mem = kalloc()) == 0)
+    //   goto bad;
+    // memmove(mem, (char*)P2V(pa), PGSIZE);
+
+
+
+    if(mappages(d, (void*)i, PGSIZE, V2P(pte), flags) < 0)
       goto bad;
   }
+  
   return d;
 
 bad:

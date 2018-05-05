@@ -7,18 +7,12 @@ int stderr = 2;
 int
 main(int argc, char *argv[])
 {
-  //struct rtcdate r;
-
-  /*if (date(&r)) {
-    printf(stderr, "Erro na chamada de sistema\n");
-    exit();
-  }*/
 
 	char *physical = "";
 
-	printf(stdout,"%x\n",(char*)(virt2real(physical)));
+	printf(stdout,"%s\n",(char*)(virt2real(physical)));
 
-  // Imprima a data aqui
+	// return (char*)(virt2real(physical));
 
   exit();
 }

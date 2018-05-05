@@ -231,9 +231,9 @@ forkcow(void){
   if((np = allocproc()) == 0){
     return -1;
   }
-
+  // cprintf("sz: %d\n",curproc->sz);
   // Copy process state from proc.
-  if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
+  if((np->pgdir = copyuvmcow(curproc->pgdir, curproc->sz)) == 0){
     kfree(np->kstack);
     np->kstack = 0;
     np->state = UNUSED;
