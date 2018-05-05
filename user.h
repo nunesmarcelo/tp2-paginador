@@ -28,8 +28,8 @@ int date(void*);
 //parte2
 char* virt2real(char *va);
 int num_pages(void);
-int forkcow(void);
 int corretor(void);
+int forkcow(void);
 
 // ulib.c
 int stat(char*, struct stat*);
