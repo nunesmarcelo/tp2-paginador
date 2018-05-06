@@ -371,7 +371,7 @@ copyuvmcow(pde_t *pgdir, uint sz)
     else
       pte = 0;
 
-    cprintf("pte= %x\n",pte);
+    // cprintf("pte= %x\n",pte);
     if(!(*pte & PTE_P))
       panic("copyuvm: page not present");
 
@@ -387,17 +387,15 @@ copyuvmcow(pde_t *pgdir, uint sz)
     //   goto bad;
     // memmove(mem, (char*)P2V(pa), PGSIZE);
 
-
-
-    if(mappages(d, (void*)i, PGSIZE, V2P(pte), flags) < 0)
-      goto bad;
+    // if(mappages(d, (void*)i, PGSIZE, V2P(pte), flags) < 0)
+    //   goto bad;
   }
   
   return d;
 
-bad:
-  freevm(d);
-  return 0;
+// bad:
+//   freevm(d);
+//   return 0;
 }
 
 //PAGEBREAK!

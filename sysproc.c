@@ -112,30 +112,20 @@ sys_date(void)
 int
 sys_virt2real(void){
   char *va;
-  argstr(0, &va);
-  // cprintf("%x\n",va);
-  
+  argstr(0, &va);  
   pde_t *pde;
-  // cprintf("%x\n",pde);
-  // cprintf("%x\n",*pde);
 
   pte_t *pgtab;
 
   pde = &(myproc()->pgdir[PDX(va)]);
-  // cprintf("%x\n",pde);
   
   if(*pde & PTE_P){
     pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
-    // cprintf("%x\n",pgtab);
     return (int)(&pgtab[PTX(va)]);
   }
   
 
   return 0;
-
-  //static pte_t* walkpgdir(pde_t *pgdir, const void *va, int alloc)
-  // return (walkpgdir(myproc()->pgdir[PDX(va)],va,0));
-
 }
 
 int
