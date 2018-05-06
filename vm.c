@@ -354,12 +354,12 @@ copyuvmcow(pde_t *pgdir, uint sz)
 
   // if((d = setupkvm()) == 0)
   //   return 0;
-  *d = *pgdir;
+  // d = pgdir;
 
-cprintf("d1= %x\n",*d);
-  *d &= ~PTE_W;
-  *d |= PTE_COW;
-cprintf("d2= %x\n",*d);
+// cprintf("d1= %x\n",*d);
+//   *d &= ~PTE_W;
+//   *d |= PTE_COW;
+// cprintf("d2= %x\n",*d);
   for(i = 0; i < sz; i += PGSIZE){
   // cprintf("cheguei\n");
     // if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
@@ -378,6 +378,7 @@ cprintf("d2= %x\n",*d);
     // pa = PTE_ADDR(*pte);
 
     *pte &= ~PTE_W;
+    *pte |= PTE_COW;
 
     flags = PTE_FLAGS(*pte);
     
