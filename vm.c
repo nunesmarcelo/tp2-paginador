@@ -7,9 +7,13 @@
 #include "mmu.h"
 #include "proc.h"
 #include "elf.h"
+#include "spinlock.h"
 
 extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
+
+struct spinlock lock;
+char pg_refcount[PHYSTOP >> PGSHIFT];
 
 // Set up CPU's kernel segment descriptors.
 // Run once on entry on each CPU.
@@ -190,6 +194,9 @@ inituvm(pde_t *pgdir, char *init, uint sz)
   mem = kalloc();
   memset(mem, 0, PGSIZE);
   mappages(pgdir, 0, PGSIZE, V2P(mem), PTE_W|PTE_U);
+  acquire(&lock);
+  pg_refcount[V2P(mem) >> PGSHIFT] = pg_refcount[V2P(mem) >> PGSHIFT] + 1;
+  release(&lock);
   memmove(mem, init, sz);
 }
 
@@ -239,6 +246,9 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       return 0;
     }
     memset(mem, 0, PGSIZE);
+    acquire(&lock);
+    pg_refcount[V2P(mem) >> PGSHIFT] = pg_refcount[V2P(mem) >> PGSHIFT] + 1;
+    release(&lock);
     if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
       cprintf("allocuvm out of memory (2)\n");
       deallocuvm(pgdir, newsz, oldsz);
@@ -271,8 +281,12 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       pa = PTE_ADDR(*pte);
       if(pa == 0)
         panic("kfree");
-      char *v = P2V(pa);
-      kfree(v);
+        acquire(&lock);
+        if(--pg_refcount[pa >> PGSHIFT] == 0){
+          char *v = P2V(pa);
+          kfree(v);
+        }
+        release(&lock);
       *pte = 0;
     }
   }
@@ -350,52 +364,34 @@ copyuvmcow(pde_t *pgdir, uint sz)
   pde_t *d;
   pte_t *pte;
   uint pa, i, flags;
-  char *mem;
+  // char *mem;
 
-  // if((d = setupkvm()) == 0)
-  //   return 0;
-  // d = pgdir;
-
-// cprintf("d1= %x\n",*d);
-//   *d &= ~PTE_W;
-//   *d |= PTE_COW;
-// cprintf("d2= %x\n",*d);
+  if((d = setupkvm()) == 0)
+    return 0;
   for(i = 0; i < sz; i += PGSIZE){
-  // cprintf("cheguei\n");
-    // if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
-    //   panic("copyuvm: pte should exist");
-    d = &(myproc()->pgdir[PDX(pgdir)]);
-    // exit();
-    if(*d & PTE_P)
-      pte = (pte_t*)P2V(PTE_ADDR(*d));
-    else
-      pte = 0;
-
-    // cprintf("pte= %x\n",pte);
+    if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
+      panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
       panic("copyuvm: page not present");
-
-    // pa = PTE_ADDR(*pte);
-
     *pte &= ~PTE_W;
     *pte |= PTE_COW;
-
+    pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
-    
 
-    // if((mem = kalloc()) == 0)
-    //   goto bad;
-    // memmove(mem, (char*)P2V(pa), PGSIZE);
-
-    // if(mappages(d, (void*)i, PGSIZE, V2P(pte), flags) < 0)
-    //   goto bad;
-  }
+    if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0)
+      goto bad;
   
+    acquire(&lock);
+    pg_refcount[pa >> PGSHIFT] = pg_refcount[pa >> PGSHIFT] + 1;
+    release(&lock);
+  }
+  lcr3(V2P(pgdir));
   return d;
 
-// bad:
-//   freevm(d);
-//   return 0;
+bad:
+  freevm(d);
+  lcr3(V2P(pgdir));
+  return 0;
 }
 
 //PAGEBREAK!
