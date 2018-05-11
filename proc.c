@@ -221,6 +221,12 @@ fork(void)
   return pid;
 }
 
+uint*
+virt2real_proc(char* va)
+{
+  return (uint*)virt2real_vm(myproc()->pgdir,va);
+}
+
 int
 forkcow(void){
   int i, pid;

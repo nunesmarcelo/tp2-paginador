@@ -1,4 +1,3 @@
-// #include "user.h"
 #include "param.h"
 #include "types.h"
 #include "defs.h"
@@ -392,6 +391,71 @@ bad:
   freevm(d);
   lcr3(V2P(pgdir));
   return 0;
+}
+
+char * 
+virt2real_vm(uint *pgdir, const char *va)
+{
+  return (char *)walkpgdir(pgdir,va,0);
+}
+
+void pagefault(struct proc* proc, struct cpu* cpu) 
+{
+  uint va = rcr2();
+  uint pa;
+  pte_t *pte;
+  char *mem;
+
+  if(va >= KERNBASE){
+    // cprintf("pid %d %s: Illegal memory access on CPU %d due to virtual address 0x%x is mapped to kernel code. So killing the process\n", proc->pid, proc->name, cpu->id, va);
+    proc->killed = 1;
+    return;
+  }
+  if((pte = walkpgdir(proc->pgdir, (void*)va, 0)) == 0){
+    // cprintf("pid %d %s: Illegal memory access on CPU %d due to virtual address 0x%x is mapped to NULL pte. So killing the process\n", proc->pid, proc->name, cpu->id, va);
+    proc->killed = 1;
+    return;
+  }
+  if(!(*pte & PTE_P)){
+    // cprintf("pid %d %s: Illegal memory access on CPU %d due to virtual address 0x%x is mapped to pte which is not present. So killing the process\n", proc->pid, proc->name, cpu->id, va);
+    proc->killed = 1;
+    return;
+  }
+  if(!(*pte & PTE_U)){
+    // cprintf("pid %d %s: Illegal memory access on CPU %d due to virtual address 0x%x is mapped to pte which is not accessible to user. So killing the process\n", proc->pid, proc->name, cpu->id, va);
+    proc->killed = 1;
+    return;
+  }
+  if(*pte & PTE_W){
+    panic("Unknown page fault due to a writable pte");
+  } else {
+    pa = PTE_ADDR(*pte);
+    acquire(&lock);
+    if(pg_refcount[pa >> PGSHIFT] == 1){
+      release(&lock);
+      *pte |= PTE_W;
+      *pte &= ~PTE_COW;
+    } else {
+      if(pg_refcount[pa >> PGSHIFT] > 1){
+        release(&lock);
+        if((mem = kalloc()) == 0){
+          cprintf("pid %d %s: Pagefault due to out of memory", proc->pid, proc->name);
+          proc->killed = 1;
+          return;
+        }
+        memmove(mem, (char*)P2V(pa), PGSIZE);
+        acquire(&lock);
+        pg_refcount[pa >> PGSHIFT] = pg_refcount[pa >> PGSHIFT] - 1;
+        pg_refcount[V2P(mem) >> PGSHIFT] = pg_refcount[V2P(mem) >> PGSHIFT] + 1;
+        release(&lock);
+        *pte = V2P(mem) | PTE_P | PTE_W | PTE_U;
+      } else {
+        release(&lock);
+        panic("Pagefault due to wrong ref count");
+      }
+    }
+    lcr3(V2P(proc->pgdir));
+  }
 }
 
 //PAGEBREAK!

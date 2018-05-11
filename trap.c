@@ -78,9 +78,9 @@ trap(struct trapframe *tf)
     lapiceoi();
     break;
   case T_PGFLT:
-    cprintf("cheguei!\n");
-    myproc()->killed = 1;
-    lapiceoi();
+    if(tf->eflags & 0x2)
+      pagefault(myproc(),mycpu());
+    // myproc()->killed = 1;
     break;
 
   //PAGEBREAK: 13
