@@ -113,20 +113,8 @@ int
 sys_virt2real(void){
   char *va;
   argstr(0, &va);  
-  // pde_t *pde;
-
-  // pte_t *pgtab;
-
-  // pde = &(myproc()->pgdir[PDX(va)]);
   
-  // if(*pde & PTE_P){
-  //   pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
-  //   return (int)(&pgtab[PTX(va)]);
-  // }
-  
-  return (int)virt2real_proc((char*)va);
-
-  // return 0;
+  return (int)virt2real((char*)va);
 }
 
 int

@@ -223,9 +223,9 @@ fork(void)
 }
 
 uint*
-virt2real_proc(char* va)
+virt2real(char* va)
 {
-  return (uint*)virt2real_vm(myproc()->pgdir,va);
+  return (uint*)uva2ka(myproc()->pgdir,va);
 }
 
 int

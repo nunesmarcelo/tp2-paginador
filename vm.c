@@ -395,19 +395,6 @@ bad:
   return 0;
 }
 
-char * 
-virt2real_vm(uint *pgdir, const char *va)
-{
-  pte_t *pte;
-
-  pte = walkpgdir(pgdir, va, 0);
-  if((*pte & PTE_P) == 0)
-    return 0;
-  if((*pte & PTE_U) == 0)
-    return 0;
-  return (char*)P2V(PTE_ADDR(*pte));
-}
-
 void pagefault(struct proc* proc, struct cpu* cpu) 
 {
   uint va = rcr2();
@@ -416,27 +403,27 @@ void pagefault(struct proc* proc, struct cpu* cpu)
   char *mem;
 
   if(va >= KERNBASE){
-    // cprintf("pid %d %s: Illegal memory access on CPU %d due to virtual address 0x%x is mapped to kernel code. So killing the process\n", proc->pid, proc->name, cpu->id, va);
+    cprintf("pid %d %s: Acesso ilegal de memória na CPU %d - Endereço virtual 0x%x mapeado para o kernel. Matando o processo.\n", proc->pid, proc->name, cpuid(), va);
     proc->killed = 1;
     return;
   }
   if((pte = walkpgdir(proc->pgdir, (void*)va, 0)) == 0){
-    // cprintf("pid %d %s: Illegal memory access on CPU %d due to virtual address 0x%x is mapped to NULL pte. So killing the process\n", proc->pid, proc->name, cpu->id, va);
+    cprintf("pid %d %s: Acesso ilegal de memória na CPUI %d - Endereço virtual 0x%x mapeado para pte NULL. Matando o processo.\n", proc->pid, proc->name, cpuid(), va);
     proc->killed = 1;
     return;
   }
   if(!(*pte & PTE_P)){
-    // cprintf("pid %d %s: Illegal memory access on CPU %d due to virtual address 0x%x is mapped to pte which is not present. So killing the process\n", proc->pid, proc->name, cpu->id, va);
+    cprintf("pid %d %s: Acesso ilegal de memória na CPUI %d - Endereço virtual 0x%x mapeado para pte não presente. Matando o processo\n", proc->pid, proc->name, cpuid(), va);
     proc->killed = 1;
     return;
   }
   if(!(*pte & PTE_U)){
-    // cprintf("pid %d %s: Illegal memory access on CPU %d due to virtual address 0x%x is mapped to pte which is not accessible to user. So killing the process\n", proc->pid, proc->name, cpu->id, va);
+    cprintf("pid %d %s: Acesso ilegal de memória na CPUI %d - Endereço virtual 0x%x mapeado para pte não acessível ao usuário. Matando o processo\n", proc->pid, proc->name, cpuid(), va);
     proc->killed = 1;
     return;
   }
   if(*pte & PTE_W){
-    panic("Unknown page fault due to a writable pte");
+    panic("Pagefault desconhecida devido a página com permissão de escrita");
   } else {
     pa = PTE_ADDR(*pte);
     acquire(&lock);
@@ -448,7 +435,7 @@ void pagefault(struct proc* proc, struct cpu* cpu)
       if(pg_refcount[pa >> PGSHIFT] > 1){
         release(&lock);
         if((mem = kalloc()) == 0){
-          cprintf("pid %d %s: Pagefault due to out of memory", proc->pid, proc->name);
+          cprintf("pid %d %s: Pagefault - Erro no kalloc por falta de memória. Matando processo\n", proc->pid, proc->name);
           proc->killed = 1;
           return;
         }
@@ -460,7 +447,7 @@ void pagefault(struct proc* proc, struct cpu* cpu)
         *pte = V2P(mem) | PTE_P | PTE_W | PTE_U;
       } else {
         release(&lock);
-        panic("Pagefault due to wrong ref count");
+        panic("Pagefault - Erro na contagem de páginas");
       }
     }
     lcr3(V2P(proc->pgdir));
