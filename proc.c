@@ -208,6 +208,7 @@ fork(void)
       np->ofile[i] = filedup(curproc->ofile[i]);
   np->cwd = idup(curproc->cwd);
 
+  
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
 
   pid = np->pid;

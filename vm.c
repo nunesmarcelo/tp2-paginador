@@ -398,7 +398,14 @@ bad:
 char * 
 virt2real_vm(uint *pgdir, const char *va)
 {
-  return (char *)walkpgdir(pgdir,va,0);
+  pte_t *pte;
+
+  pte = walkpgdir(pgdir, va, 0);
+  if((*pte & PTE_P) == 0)
+    return 0;
+  if((*pte & PTE_U) == 0)
+    return 0;
+  return (char*)P2V(PTE_ADDR(*pte));
 }
 
 void pagefault(struct proc* proc, struct cpu* cpu) 
