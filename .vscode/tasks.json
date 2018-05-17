@@ -4,9 +4,18 @@
     "version": "2.0.0",
     "tasks": [
       {
-        "label": "Build",
+        "label": "Debug",
         "type": "shell",
         "command": "make qemu-gdb",
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      },
+      {
+        "label": "Build",
+        "type": "shell",
+        "command": "make qemu",
         "group": {
           "kind": "build",
           "isDefault": true

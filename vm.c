@@ -424,7 +424,8 @@ void pagefault(struct proc* proc, struct cpu* cpu)
   }
   if(*pte & PTE_W){
     panic("Pagefault desconhecida devido a página com permissão de escrita");
-  } else {
+  }
+  if(*pte & PTE_COW){
     pa = PTE_ADDR(*pte);
     acquire(&lock);
     if(pg_refcount[pa >> PGSHIFT] == 1){
@@ -451,6 +452,8 @@ void pagefault(struct proc* proc, struct cpu* cpu)
       }
     }
     lcr3(V2P(proc->pgdir));
+  } else {
+    panic("Pagefault - Não sei o que aconteceu!!!");
   }
 }
 
